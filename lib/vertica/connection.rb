@@ -169,7 +169,8 @@ module Vertica
         # when Messages::CopyOutResponse
         #   raise 'not done'
         when Messages::DataRow
-          @field_values << message.fields
+          @result.add_value message.fields
+          # @field_values << message.fields
         when Messages::EmptyQueryResponse
           break
         when Messages::ErrorResponse
@@ -194,13 +195,14 @@ module Vertica
           @transaction_status = convert_transaction_status_to_sym(message.transaction_status)
           break unless return_result
         when Messages::RowDescription
-          @field_descriptions = message.fields
+          @result.add_description message.fields
+          # @field_descriptions = message.fields
         when Messages::Unknown
           raise Error::MessageError.new("Unknown message type: #{message.message_id}")
         end
       end
       
-      return_result ? Result.new(@field_descriptions, @field_values) : nil
+      return_result ? @result : nil
     end
     
     def raise_if_not_open
@@ -222,8 +224,9 @@ module Vertica
     end
 
     def reset_result
-      @field_descriptions = []
-      @field_values       = []
+      @result = Result.new
+      # @field_descriptions = []
+      # @field_values       = []
     end    
     
     def convert_transaction_status_to_sym(status)

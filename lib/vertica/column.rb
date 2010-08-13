@@ -27,7 +27,7 @@ module Vertica
       :bytea,
       :rle_tuple
     ]
-    
+
     DATA_TYPE_CONVERSIONS = {
       :unspecified    => nil,
       :tuple          => nil,
@@ -59,8 +59,9 @@ module Vertica
       @data_type = DATA_TYPES[data_type_oid]
       @size = size
     end
-    
+
     def convert(s)
+      return unless s
       l = DATA_TYPE_CONVERSIONS[@data_type]
       l ? l.call(s) : s
     end
