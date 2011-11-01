@@ -135,6 +135,18 @@ class Vertica::Connection
     "#<Vertica::Connection:#{object_id} @parameters=#{@parameters.inspect} @backend_pid=#{@backend_pid}, @backend_key=#{@backend_key}, @transaction_status=#{@transaction_status}, @socket=#{@socket}, @options=#{safe_options.inspect}, @row_style=#{@row_style}>"
   end
   
+  def prepare(sql, param_count = 0, options = {}, &block)
+    statement = Vertica::PreparedStatement.new(self, sql, param_count, options)
+    statement.prepare
+
+    if block_given?
+      yield statement
+      statement.close
+    else
+      return statement
+    end
+  end
+
   protected
   
   def file_copy_handler(input_file, output)
@@ -187,6 +199,7 @@ class Vertica::Connection
 end
 
 require 'vertica/query'
+require 'vertica/prepared_statement'
 require 'vertica/column'
 require 'vertica/result'
 require 'vertica/portal'

@@ -10,6 +10,10 @@ module Vertica
         parameter_type_ids = data.unpack("@2N#{parameter_count}")
         @parameter_types   = parameter_type_ids.map { |id| Vertica::Column::DATA_TYPES[id] }
       end
+
+      def length
+        @parameter_types.length
+      end
     end
   end
 end
