@@ -24,15 +24,24 @@ class PreparedStatementTest < Test::Unit::TestCase
   end
 
   def test_buffered_prepared_statement_without_parameters
-    @connection.debug = true
     statement = @connection.prepare("SELECT * FROM test_ruby_vertica_table WHERE id = 1")
     assert_equal [{:id => 1, :name => "matt"}], statement.execute.rows
     statement.close
-    @connection.debug = false
   end
 
   def test_resultless_query_without_parameters
     statement = @connection.prepare("CREATE TABLE IF NOT EXISTS test_ruby_vertica_table2 (id int, name varchar(100))")
     assert_nil statement.execute
   end
+
+  # def test_unbuffered_prepared_statement_with_single_parameter
+  #   @connection.debug = true
+  #   row_count = 0
+  #   @connection.prepare("SELECT * FROM test_ruby_vertica_table WHERE id = $1", 1) do |statement|
+  #     statement.execute(1) { |row| row_count += 1 }
+  #   end
+  #
+  #   assert_equal row_count, 1
+  #   @connection.debug = false
+  # end
 end

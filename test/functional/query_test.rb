@@ -92,19 +92,6 @@ class QueryTest < Test::Unit::TestCase
     end
   end
   
-  def test_cleanup_after_select
-    3.times do
-      r = @connection.query("SELECT * FROM test_ruby_vertica_table")
-      assert_equal 1, r.row_count
-      assert_equal 2, r.columns.length
-      assert_equal :integer, r.columns[0].data_type
-      assert_equal :id, r.columns[0].name
-      assert_equal :varchar, r.columns[1].data_type
-      assert_equal :name, r.columns[1].name
-      assert_equal [{:id => 1, :name => "matt"}], r.rows
-    end
-  end  
-  
   def test_sql_error
     assert_raises Vertica::Error::QueryError do 
       @connection.query("SELECT * FROM nonexistingfdg")
