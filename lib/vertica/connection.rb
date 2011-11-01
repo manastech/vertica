@@ -189,4 +189,5 @@ end
 require 'vertica/query'
 require 'vertica/column'
 require 'vertica/result'
+require 'vertica/portal'
 require 'vertica/messages/message'

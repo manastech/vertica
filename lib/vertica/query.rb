@@ -1,7 +1,7 @@
 class Vertica::Query
 
-  attr_reader :connection, :sql
-  attr_accessor :row_handler, :copy_handler, :row_style
+  attr_reader :connection, :sql, :row_style, :tag
+  attr_accessor :row_handler, :copy_handler
 
   def initialize(connection, sql, options = {})
     @connection, @sql = connection, sql
@@ -23,8 +23,10 @@ class Vertica::Query
         error = "The provided query was empty."
       when Vertica::Messages::CopyInResponse
         handle_copy_from_stdin
-      when Vertica::Messages::RowDescription, Vertica::Messages::CommandComplete
-        result = retreive_result(message, Vertica::Result.new(row_style))
+      when Vertica::Messages::CommandComplete
+        @tag = message.tag
+      when Vertica::Messages::RowDescription
+        result = Vertica::Portal.new(@connection, message, row_style, &row_handler).retreive_rows
       else
         @connection.process_message(message)
       end
@@ -58,27 +60,5 @@ class Vertica::Query
         raise
       end
     end
-  end
-  
-  def retreive_result(message, result)
-    until message.kind_of?(Vertica::Messages::CommandComplete)
-      case message
-      when Vertica::Messages::RowDescription
-        result.descriptions = message
-      when Vertica::Messages::DataRow
-        record = result.format_row(message)
-        result.add_row(record) if buffer_rows?
-        @row_handler.call(record) if @row_handler
-      else
-        @connection.process_message(message)
-      end
-      message = @connection.read_message
-    end
-    result.tag = message.tag
-    return result
-  end
-  
-  def buffer_rows?
-    @row_handler.nil? && @copy_handler.nil?
   end
 end
