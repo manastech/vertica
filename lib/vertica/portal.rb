@@ -57,8 +57,9 @@ class Vertica::Portal
   def close
     @connection.write Vertica::Messages::Close.new(:portal, @name)
     @connection.write Vertica::Messages::Sync.new
-    until Vertica::Messages::CloseComplete === (message = @connection.read_message)
-      @connection.process_message(message)
-    end
+    begin
+      message = @connection.read_message
+      @connection.process_message(message) unless message.instance_of?(Vertica::Messages::CloseComplete)
+    end until Vertica::Messages::ReadyForQuery === message
   end
 end

@@ -24,14 +24,15 @@ class PreparedStatementTest < Test::Unit::TestCase
   end
 
   def test_buffered_prepared_statement_without_parameters
+    @connection.debug = true
     statement = @connection.prepare("SELECT * FROM test_ruby_vertica_table WHERE id = 1")
     assert_equal [{:id => 1, :name => "matt"}], statement.execute.rows
     statement.close
+    @connection.debug = false
   end
 
   def test_resultless_query_without_parameters
-    statement = @connection.prepare("INSERT INTO test_ruby_vertica_table VALUES (2, 'willem')")
-    result = statement.execute
-    assert_equal [{:OUTPUT => 1}], result.rows
+    statement = @connection.prepare("CREATE TABLE IF NOT EXISTS test_ruby_vertica_table2 (id int, name varchar(100))")
+    assert_nil statement.execute
   end
 end

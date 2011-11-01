@@ -23,8 +23,10 @@ class Vertica::PreparedStatement
         # all ok, get description messages
       when Vertica::Messages::ParameterDescription
         @parameter_description = message
-      when Vertica::Messages::RowDescription, Vertica::Messages::NoData
+      when Vertica::Messages::RowDescription
         @row_description = message
+      when Vertica::Messages::NoData
+        # noop
       else
         @connection.process_message(message)
       end
@@ -49,9 +51,12 @@ class Vertica::PreparedStatement
       when Vertica::Messages::ErrorResponse
         error = message.error_message
       when Vertica::Messages::BindComplete
-        portal = Vertica::Portal.new(@connection, @row_description, row_style, &block)
-        result = portal.retreive_rows
-        portal.close
+        if @row_description
+          portal = Vertica::Portal.new(@connection, @row_description, row_style, &block)
+          result = portal.retreive_rows
+        else
+          wait_for_command_complete
+        end
       else
         @connection.process_message(message)
       end
@@ -61,11 +66,18 @@ class Vertica::PreparedStatement
     return result
   end
 
+  def wait_for_command_complete
+    until Vertica::Messages::CommandComplete === (message = @connection.read_message)
+      @connection.process_message(message)
+    end
+  end
+
   def close
     @connection.write Vertica::Messages::Close.new(:prepared_statement, @name)
     @connection.write Vertica::Messages::Sync.new
-    until Vertica::Messages::CloseComplete === (message = @connection.read_message)
-      @connection.process_message(message)
-    end
+    begin
+      message = @connection.read_message
+      @connection.process_message(message) unless message.instance_of?(Vertica::Messages::CloseComplete)
+    end until Vertica::Messages::ReadyForQuery === message
   end
 end
