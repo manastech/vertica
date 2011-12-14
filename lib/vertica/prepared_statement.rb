@@ -35,14 +35,18 @@ class Vertica::PreparedStatement
     raise Vertica::Error::QueryError, error if error
     return self
   end
+  
+  def bind(*parameters)
+    options      = parameters.last.kind_of?(Hash) ? parameters.pop : {}
+    @portal_name = options[:portal] || ""
+    @connection.write Vertica::Messages::Bind.new(@portal_name, @name, parameters.map { |p| p.to_s })
+    return self
+  end
 
   def execute(*parameters, &block)
-    options     = parameters.last.kind_of?(Hash) ? parameters.pop : {}
-    portal_name = options[:portal]   || ""
-    max_rows    = options[:max_rows] || 0
-
-    @connection.write Vertica::Messages::Bind.new(portal_name, @name, parameters.map { |p| p.to_s })
-    @connection.write Vertica::Messages::Execute.new(portal_name, max_rows)
+    max_rows = parameters.last.kind_of?(Hash) ? parameters.last[:max_rows] : 0
+    bind(*parameters) if @portal_name.nil?
+    @connection.write Vertica::Messages::Execute.new(@portal_name, max_rows)
     @connection.write Vertica::Messages::Sync.new
 
     result, error = nil
@@ -71,6 +75,16 @@ class Vertica::PreparedStatement
       @connection.process_message(message)
     end
   end
+  
+  def close_portal
+    @connection.write Vertica::Messages::Close.new(:portal, @portal_name)
+    @connection.write Vertica::Messages::Sync.new
+    begin
+      message = @connection.read_message
+      @connection.process_message(message) unless message.instance_of?(Vertica::Messages::CloseComplete)
+    end until Vertica::Messages::ReadyForQuery === message
+    @portal_name = nil
+  end
 
   def close
     @connection.write Vertica::Messages::Close.new(:prepared_statement, @name)
@@ -79,5 +93,6 @@ class Vertica::PreparedStatement
       message = @connection.read_message
       @connection.process_message(message) unless message.instance_of?(Vertica::Messages::CloseComplete)
     end until Vertica::Messages::ReadyForQuery === message
+    @portal_name, @name = nil, nil
   end
 end

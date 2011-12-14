@@ -3,7 +3,7 @@ module Vertica
     class Execute < FrontendMessage
       message_id 'E'
 
-      def initialize(portal_name, max_rows)
+      def initialize(portal_name, max_rows = 0)
         @portal_name = portal_name
         @max_rows    = max_rows
       end

@@ -16,4 +16,9 @@ class FrontendMessageTest < Test::Unit::TestCase
     message = Vertica::Messages::CopyData.new("foo|bar\n")
     assert_equal message.to_bytes, ['d', 0, 0, 0, 12, "foo|bar\n"].pack('AC4A*')
   end
+  
+  def test_execute_message
+    message = Vertica::Messages::Execute.new("portal", 0xF3)
+    assert_equal message.to_bytes, ['E', 15, "portal", 0xF3].pack('ANZ*N')
+  end  
 end
