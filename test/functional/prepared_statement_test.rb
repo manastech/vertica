@@ -6,6 +6,10 @@ class PreparedStatementTest < Test::Unit::TestCase
     @connection = Vertica::Connection.new(TEST_CONNECTION_HASH)
     @connection.query("CREATE TABLE IF NOT EXISTS test_ruby_vertica_table (id int, name varchar(100))")
     @connection.query("INSERT INTO test_ruby_vertica_table VALUES (1, 'matt')")
+    @connection.query("INSERT INTO test_ruby_vertica_table VALUES (2, 'willem')")
+    @connection.query("INSERT INTO test_ruby_vertica_table VALUES (3, 'willem')")
+    @connection.query("INSERT INTO test_ruby_vertica_table VALUES (4, 'willem')")
+    @connection.query("INSERT INTO test_ruby_vertica_table VALUES (5, 'willem')")
     @connection.query("COMMIT")
   end
 
@@ -16,11 +20,11 @@ class PreparedStatementTest < Test::Unit::TestCase
 
   def test_unbuffered_prepared_statement_without_parameters
     row_count = 0
-    @connection.prepare("SELECT * FROM test_ruby_vertica_table WHERE id = 1") do |statement|
+    @connection.prepare("SELECT * FROM test_ruby_vertica_table WHERE name = 'willem'") do |statement|
       statement.execute { |row| row_count += 1 }
     end
 
-    assert_equal row_count, 1
+    assert_equal row_count, 4
   end
 
   def test_buffered_prepared_statement_without_parameters
@@ -32,16 +36,6 @@ class PreparedStatementTest < Test::Unit::TestCase
   def test_resultless_query_without_parameters
     statement = @connection.prepare("CREATE TABLE IF NOT EXISTS test_ruby_vertica_table2 (id int, name varchar(100))")
     assert_nil statement.execute
+    statement.close
   end
-
-  # def test_unbuffered_prepared_statement_with_single_parameter
-  #   @connection.debug = true
-  #   row_count = 0
-  #   @connection.prepare("SELECT * FROM test_ruby_vertica_table WHERE id = $1", 1) do |statement|
-  #     statement.execute(1) { |row| row_count += 1 }
-  #   end
-  #
-  #   assert_equal row_count, 1
-  #   @connection.debug = false
-  # end
 end

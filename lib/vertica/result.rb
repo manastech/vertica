@@ -19,7 +19,7 @@ class Vertica::Result
     if empty?
       nil
     else
-      @row_style == :array ? rows[0][0] : rows[0][columns[0].name]
+      rows[0].kind_of?(Array) ? rows[0][0] : rows[0][columns[0].name]
     end
   end
   
