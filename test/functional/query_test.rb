@@ -108,6 +108,18 @@ class QueryTest < Test::Unit::TestCase
       assert_equal [{:id => 1, :name => "matt"}], r.rows
     end
   end  
+
+  def test_timeout
+    assert_raises(Errno::ETIMEDOUT) do
+      @connection.timeout = 0.0001
+      @connection.query <<-SQL 
+        SELECT * 
+          FROM test_ruby_vertica_table
+          CROSS JOIN test_ruby_vertica_table
+
+      SQL
+    end
+  end
   
   def test_sql_error
     assert_raises Vertica::Error::MissingColumn do 

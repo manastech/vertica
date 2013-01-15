@@ -4,7 +4,7 @@ class Vertica::Connection
 
   attr_reader :options, :notices, :transaction_status, :backend_pid, :backend_key, :parameters, :notice_handler, :session_id
 
-  attr_accessor :row_style, :debug
+  attr_accessor :row_style, :debug, :timeout
 
   def self.cancel(existing_conn)
     existing_conn.cancel
@@ -20,6 +20,7 @@ class Vertica::Connection
     @options[:port] ||= 5433
 
     @row_style = @options[:row_style] ? @options[:row_style] : :hash
+    @timeout = 30
     unless options[:skip_startup]
       startup_connection
       initialize_connection
@@ -190,9 +191,14 @@ class Vertica::Connection
   end
 
   def read_bytes(n)
-    bytes = socket.read(n)
-    raise Vertica::Error::ConnectionError.new("Couldn't read #{n} characters from socket.") if bytes.nil? || bytes.size != n
-    return bytes
+    rs, _, _ = IO.select([socket], nil, nil, @timeout)
+    if rs
+      bytes = rs[0].read(n)
+      raise Vertica::Error::ConnectionError.new("Couldn't read #{n} characters from socket.") if bytes.nil? || bytes.size != n
+      return bytes
+    else 
+      raise Errno::ETIMEDOUT
+    end
   end
   
   def startup_connection
