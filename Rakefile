@@ -15,7 +15,7 @@ begin
     gem.files = FileList["[A-Z]*", 'lib/**/*.rb'].to_a
 
     gem.test_files = FileList['test/**/*.rb']
-    
+
     # gem is a Gem::Specification... see http://www.rubygems.org/read/chapter/20 for additional settings
   end
 
@@ -45,3 +45,10 @@ end
 desc 'Generate documentation'
 task :doc => :yard
 task :default => :test
+
+require 'rake/extensiontask'
+Rake::ExtensionTask.new('vertica') do |ext|
+  ext.lib_dir = File.join('lib', 'vertica')
+end
+
+task :test => :compile

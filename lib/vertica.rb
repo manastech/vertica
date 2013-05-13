@@ -1,12 +1,13 @@
 require 'date'
 require 'bigdecimal'
+require 'vertica/vertica'
 
 # Main module for this library. It contains the {.connect} method to return a
-# {Vertica::Connection} instance, and methods to quote values ({.quote}) and 
+# {Vertica::Connection} instance, and methods to quote values ({.quote}) and
 # identifiers ({.quote_identifier}) to safely include those in SQL strings to
 # prevent SQL injection.
 module Vertica
-  
+
   # The version number of this library.
   VERSION = File.read(File.join(File.dirname(__FILE__), *%w[.. VERSION])).strip
 
@@ -19,7 +20,7 @@ module Vertica
   def self.connect(options)
     Vertica::Connection.new(options)
   end
-  
+
   # Properly quotes a value for safe usage in SQL queries.
   #
   # This method has quoting rules for common types. Any other object will be converted to
@@ -42,7 +43,7 @@ module Vertica
       else self.quote(value.to_s)
     end
   end
-  
+
   # Quotes an identifier for safe use within SQL queries, using double quotes.
   # @param [:to_s] identifier The identifier to quote.
   # @return [String] The quoted identifier that can be safely included in SQL queries.

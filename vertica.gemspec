@@ -23,6 +23,8 @@ Gem::Specification.new do |s|
     "README.md",
     "Rakefile",
     "VERSION",
+    "ext/vertica/extconf.rb",
+    "ext/vertica/vertica.c",
     "lib/vertica.rb",
     "lib/vertica/column.rb",
     "lib/vertica/connection.rb",
@@ -65,6 +67,7 @@ Gem::Specification.new do |s|
     "lib/vertica/query.rb",
     "lib/vertica/result.rb"
   ]
+  s.extensions = ['ext/vertica/extconf.rb']
   s.homepage = "http://github.com/sprsquish/vertica"
   s.require_paths = ["lib"]
   s.rubygems_version = "1.8.25"
