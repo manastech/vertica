@@ -1,22 +1,23 @@
 class Vertica::Query
 
   attr_reader :connection, :sql, :result, :error
-  attr_accessor :row_handler, :copy_handler, :row_style
+  attr_accessor :row_handler, :copy_handler, :row_style, :symbolize_keys
 
   def initialize(connection, sql, options = {})
     @connection, @sql = connection, sql
-    
+
     @row_style    = options[:row_style] || @connection.row_style || :hash
-    @row_handler  = options[:row_handler] 
+    @symbolize_keys = options[:symbolize_keys] != false
+    @row_handler  = options[:row_handler]
     @copy_handler = options[:copy_handler]
 
     @error  = nil
-    @result = Vertica::Result.new(row_style)
+    @result = Vertica::Result.new(row_style, symbolize_keys)
   end
 
   def run
     @connection.write Vertica::Messages::Query.new(sql)
-    
+
     begin
       process_message(message = @connection.read_message)
     end until message.kind_of?(Vertica::Messages::ReadyForQuery)
@@ -24,20 +25,20 @@ class Vertica::Query
     raise error unless error.nil?
     return result
   end
-  
+
   def write(data)
     @connection.write Vertica::Messages::CopyData.new(data)
     return self
   end
-  
+
   alias_method :<<, :write
 
   def to_s
     @sql
   end
-  
+
   protected
-  
+
   def process_message(message)
     case message
     when Vertica::Messages::ErrorResponse
@@ -56,7 +57,7 @@ class Vertica::Query
       @connection.process_message(message)
     end
   end
-  
+
   def handle_copy_from_stdin
     if copy_handler.nil?
       @connection.write Vertica::Messages::CopyFail.new('no handler provided')
@@ -79,7 +80,7 @@ class Vertica::Query
     result.add_row(record) if buffer_rows?
     row_handler.call(record) if row_handler
   end
-  
+
   def buffer_rows?
     row_handler.nil? && copy_handler.nil?
   end

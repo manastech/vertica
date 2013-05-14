@@ -1,16 +1,16 @@
 require 'test_helper'
 
 class QueryTest < Test::Unit::TestCase
-  
+
   def setup
     @connection = Vertica::Connection.new(TEST_CONNECTION_HASH)
-    @connection.query("DROP TABLE IF EXISTS test_ruby_vertica_table CASCADE;")    
+    @connection.query("DROP TABLE IF EXISTS test_ruby_vertica_table CASCADE;")
     @connection.query("CREATE TABLE test_ruby_vertica_table (id int, name varchar(100))")
     @connection.query("CREATE PROJECTION IF NOT EXISTS test_ruby_vertica_table_p (id, name) AS SELECT * FROM test_ruby_vertica_table SEGMENTED BY HASH(id) ALL NODES OFFSET 1")
     @connection.query("INSERT INTO test_ruby_vertica_table VALUES (1, 'matt')")
     @connection.query("COMMIT")
   end
-  
+
   def teardown
     if @connection.ready_for_query?
       @connection.close
@@ -18,7 +18,7 @@ class QueryTest < Test::Unit::TestCase
       @connection.interrupt
     end
   end
-  
+
   def test_select_query_with_results_as_hash
     r = @connection.query("SELECT * FROM test_ruby_vertica_table")
     assert_equal 1, r.row_count
@@ -27,10 +27,23 @@ class QueryTest < Test::Unit::TestCase
     assert_equal :id, r.columns[0].name
     assert_equal :varchar, r.columns[1].data_type
     assert_equal :name, r.columns[1].name
-    
+
     assert_equal [{:id => 1, :name => "matt"}], r.rows
   end
-  
+
+  def test_select_query_with_results_as_hash_and_without_symbolizing_keys
+    @connection.symbolize_keys = false
+    r = @connection.query("SELECT * FROM test_ruby_vertica_table")
+    assert_equal 1, r.row_count
+    assert_equal 2, r.columns.length
+    assert_equal :integer, r.columns[0].data_type
+    assert_equal "id", r.columns[0].name
+    assert_equal :varchar, r.columns[1].data_type
+    assert_equal "name", r.columns[1].name
+
+    assert_equal [{"id" => 1, "name" => "matt"}], r.rows
+  end
+
   def test_select_query_with_results_as_array
     @connection.row_style = :array
     r = @connection.query("SELECT * FROM test_ruby_vertica_table")
@@ -40,11 +53,11 @@ class QueryTest < Test::Unit::TestCase
     assert_equal :id, r.columns[0].name
     assert_equal :varchar, r.columns[1].data_type
     assert_equal :name, r.columns[1].name
-    
+
     assert_equal [[1, "matt"]], r.rows
   end
-  
-  
+
+
   def test_select_query_with_no_results
     r = @connection.query("SELECT * FROM test_ruby_vertica_table WHERE 1 != 1")
     assert_equal 0, r.row_count
@@ -55,7 +68,7 @@ class QueryTest < Test::Unit::TestCase
     assert_equal :name, r.columns[1].name
     assert_equal [], r.rows
   end
-  
+
   def test_insert
     r = @connection.query("INSERT INTO test_ruby_vertica_table VALUES (2, 'stefanie')")
     assert_equal 1, r.row_count
@@ -64,8 +77,8 @@ class QueryTest < Test::Unit::TestCase
     assert_equal :OUTPUT, r.columns[0].name
     assert_equal [{:OUTPUT => 1}], r.rows
   end
-  
-  
+
+
   def test_delete_of_no_rows
     r = @connection.query("DELETE FROM test_ruby_vertica_table WHERE 1 != 1")
     assert_equal 1, r.row_count
@@ -74,7 +87,7 @@ class QueryTest < Test::Unit::TestCase
     assert_equal :OUTPUT, r.columns[0].name
     assert_equal [{:OUTPUT => 0}], r.rows
   end
-  
+
   def test_delete_of_a_row
     r = @connection.query("DELETE FROM test_ruby_vertica_table WHERE id = 1")
     assert_equal 1, r.row_count
@@ -83,7 +96,7 @@ class QueryTest < Test::Unit::TestCase
     assert_equal :OUTPUT, r.columns[0].name
     assert_equal [{:OUTPUT => 1}], r.rows
   end
-  
+
   def test_empty_query
     assert_raises Vertica::Error::EmptyQueryError do
       @connection.query("")
@@ -91,11 +104,11 @@ class QueryTest < Test::Unit::TestCase
     assert_raises Vertica::Error::EmptyQueryError do
       @connection.query(nil)
     end
-    assert_raises Vertica::Error::EmptyQueryError do 
+    assert_raises Vertica::Error::EmptyQueryError do
       @connection.query("-- just a SQL comment")
     end
   end
-  
+
   def test_cleanup_after_select
     3.times do
       r = @connection.query("SELECT * FROM test_ruby_vertica_table")
@@ -107,8 +120,8 @@ class QueryTest < Test::Unit::TestCase
       assert_equal :name, r.columns[1].name
       assert_equal [{:id => 1, :name => "matt"}], r.rows
     end
-  end  
-  
+  end
+
   def test_read_timeout
     assert_raises(Vertica::Error::TimedOutError) do
       @connection.options[:read_timeout] = 0.0001
@@ -117,40 +130,40 @@ class QueryTest < Test::Unit::TestCase
   end
 
   def test_sql_error
-    assert_raises Vertica::Error::MissingColumn do 
+    assert_raises Vertica::Error::MissingColumn do
       @connection.query("SELECT asad FROM test_ruby_vertica_table")
     end
-    assert_raises Vertica::Error::MissingRelation do 
+    assert_raises Vertica::Error::MissingRelation do
       @connection.query("SELECT * FROM nonexisting_dsfdfsdfsdfs")
     end
-    assert_raises Vertica::Error::SyntaxError do 
+    assert_raises Vertica::Error::SyntaxError do
       @connection.query("BLAH")
     end
   end
-  
+
   def test_copy_in_with_customer_handler
     @connection.copy "COPY test_ruby_vertica_table FROM STDIN" do |data|
       data.write "11|Stuff\r\n"
       data << "12|More stuff\n13|Fin" << "al stuff\n"
     end
-    
+
     result = @connection.query("SELECT * FROM test_ruby_vertica_table ORDER BY id", :row_style => :array)
     assert_equal 4, result.length
     assert_equal [[1, "matt"], [11, "Stuff"], [12, "More stuff"], [13, "Final stuff"]], result.rows
   end
-  
+
   def test_copy_in_with_gzip
     @connection.copy "COPY test_ruby_vertica_table FROM STDIN GZIP" do |data|
        gz = Zlib::GzipWriter.new(data)
        gz << "11|Stuff\n12|More stuff\n13|Final stuff\n"
        gz.close
     end
-    
+
     result = @connection.query("SELECT * FROM test_ruby_vertica_table ORDER BY id", :row_style => :array)
     assert_equal 4, result.length
     assert_equal [[1, "matt"], [11, "Stuff"], [12, "More stuff"], [13, "Final stuff"]], result.rows
-  end  
-  
+  end
+
   def test_copy_in_with_file
     filename = File.expand_path('../../resources/test_ruby_vertica_table.csv', __FILE__)
     @connection.copy "COPY test_ruby_vertica_table FROM STDIN", filename
@@ -158,7 +171,7 @@ class QueryTest < Test::Unit::TestCase
     assert_equal 4, result.length
     assert_equal [[1, "matt"], [11, "Stuff"], [12, "More stuff"], [13, "Final stuff"]], result.rows
   end
-  
+
   def test_copy_in_with_io
     io = StringIO.new("11|Stuff\r\n12|More stuff\n13|Final stuff\n")
     @connection.copy "COPY test_ruby_vertica_table FROM STDIN", io
@@ -166,14 +179,14 @@ class QueryTest < Test::Unit::TestCase
     assert_equal 4, result.length
     assert_equal [[1, "matt"], [11, "Stuff"], [12, "More stuff"], [13, "Final stuff"]], result.rows
   end
-  
+
   def test_notice_handler
     notice_received = false
     @connection.on_notice { |notice| notice_received = true }
     @connection.query('COMMIT')
     assert notice_received
   end
-  
+
   def test_query_mutex
     mutex = Mutex.new
     values = []
@@ -199,7 +212,7 @@ class QueryTest < Test::Unit::TestCase
 
     assert_equal values.sort, [1,1,1,2,2,2,3,3,3]
   end
-  
+
   def test_raise_when_connection_is_in_use
     assert_raise(Vertica::Error::SynchronizeError) do
       @connection.query("SELECT 1 UNION SELECT 2") do |record|
@@ -207,7 +220,7 @@ class QueryTest < Test::Unit::TestCase
       end
     end
   end
-  
+
   def test_interrupting_connections
     before = @connection.query("SELECT COUNT(1) FROM test_ruby_vertica_table").the_value
     interruptable = Vertica::Connection.new(TEST_CONNECTION_HASH.merge(:interruptable => true))
@@ -215,16 +228,16 @@ class QueryTest < Test::Unit::TestCase
     t = Thread.new do
       Thread.current[:error_occurred] = false
       begin
-        10.times { |n| interruptable.query("INSERT INTO test_ruby_vertica_table VALUES (#{n}, 'interrupt test')") } 
+        10.times { |n| interruptable.query("INSERT INTO test_ruby_vertica_table VALUES (#{n}, 'interrupt test')") }
         interruptable.query("COMMIT")
       rescue Vertica::Error::ConnectionError
         Thread.current[:error_occurred] = true
       end
     end
-    
+
     interruptable.interrupt
     t.join
-    
+
     assert t[:error_occurred], "Expected an exception to occur"
     assert_equal before, @connection.query("SELECT COUNT(1) FROM test_ruby_vertica_table").the_value
   end
