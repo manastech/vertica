@@ -1,7 +1,6 @@
 pkg
 .DS_Store
 .bundle
-Gemfile.lock
 test/connection.yml
 *.rbc
 .yardoc/
