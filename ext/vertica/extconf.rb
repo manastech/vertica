@@ -1,2 +1,2 @@
 require 'mkmf'
-create_makefile('vertica')
+create_makefile('vertica/vertica')
